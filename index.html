@@ -218,7 +218,7 @@
   <div class="card" style="text-align:center">
     <div id="admin-status-text" style="font-size:13px;color:var(--muted);margin-bottom:12px">Add participants then start the quiz.</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-amber btn-full" id="btn-start" onclick="adminStart()" disabled>Start Quiz</button>
+      <button class="btn btn-amber btn-full" id="btn-start" onclick="adminStart()">Start Quiz</button>
       <button class="btn btn-danger btn-full" id="btn-reset" onclick="adminReset()" style="display:none">Reset &amp; Relaunch</button>
     </div>
   </div>
@@ -433,6 +433,13 @@ async function pollAdmin() {
   const scores = await sGet('quiz:scores') || {};
   const list   = Object.keys(names);
 
+  // only update UI if admin screen is visible
+  const adminScreen = document.getElementById('s-admin');
+  if (!adminScreen.classList.contains('active')) {
+    pollTimer = setTimeout(pollAdmin, POLL_MS);
+    return;
+  }
+
   // chips
   const ca = document.getElementById('admin-chips');
   if (list.length === 0) {
@@ -442,11 +449,13 @@ async function pollAdmin() {
   }
   document.getElementById('admin-badge').textContent = list.length + ' joined';
 
-  // start button
+  // start button — use removeAttribute/setAttribute for reliable enable/disable
   const btnStart = document.getElementById('btn-start');
-  btnStart.disabled = list.length === 0;
+  btnStart.removeAttribute('disabled');
+  btnStart.style.opacity = '1';
+  btnStart.style.cursor = 'pointer';
   document.getElementById('admin-status-text').textContent =
-    list.length > 0 ? `${list.length} participant(s) ready.` : 'Waiting for participants to join.';
+    list.length > 0 ? `${list.length} participant(s) joined. Ready to start.` : 'No participants yet — you can still start.';
 
   // monitor
   if (state && (state.status === 'question' || state.status === 'flash' || state.status === 'finished')) {
@@ -469,6 +478,7 @@ async function pollAdmin() {
 }
 
 async function adminStart() {
+  await sDel('quiz:scores');
   const state = { status: 'question', q: 0, qAt: Date.now(), flashAt: null };
   await sSet('quiz:state', state);
   document.getElementById('btn-start').style.display = 'none';
