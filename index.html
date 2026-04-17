@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wellesta — Product Knowledge Quiz</title>
+<style>
+  :root {
+    --navy: #1A2D5A;
+    --navy-dark: #0f1e3d;
+    --navy-light: #243d7a;
+    --green: #1B4332;
+    --green-mid: #2D6A4F;
+    --amber: #E9A21B;
+    --amber-light: #fef3d0;
+    --white: #ffffff;
+    --off: #f8f9fb;
+    --border: #e2e6ed;
+    --muted: #64748b;
+    --danger: #dc2626;
+    --success: #16a34a;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f4f9; }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .screen { display: none; flex-direction: column; min-height: 100vh; padding: 16px; max-width: 480px; margin: 0 auto; width: 100%; }
+  .screen.active { display: flex; }
+
+  /* HEADER */
+  .app-header { background: var(--navy); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .app-header h1 { font-size: 15px; font-weight: 600; color: var(--white); letter-spacing: 0.3px; }
+  .badge { background: var(--amber); color: #1a1200; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+
+  /* CARDS */
+  .card { background: var(--white); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; border: 1px solid var(--border); }
+
+  /* BUTTONS */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; text-align: center; }
+  .btn-primary { background: var(--navy); color: var(--white); }
+  .btn-primary:hover { background: var(--navy-light); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-success { background: var(--green); color: var(--white); }
+  .btn-success:hover { background: var(--green-mid); }
+  .btn-outline { background: var(--white); color: var(--navy); border: 1.5px solid var(--navy); }
+  .btn-outline:hover { background: var(--off); }
+  .btn-amber { background: var(--amber); color: #1a1200; }
+  .btn-amber:hover { opacity: 0.9; }
+  .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+  .btn-full { width: 100%; }
+
+  /* INPUTS */
+  input[type=text] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; outline: none; transition: border 0.15s; background: var(--white); color: #1a1a1a; }
+  input[type=text]:focus { border-color: var(--navy); }
+
+  /* QUIZ QUESTION */
+  .q-header { margin-bottom: 10px; }
+  .q-num { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .q-section { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 10px; }
+  .sec-a { background: #e8edf5; color: var(--navy); }
+  .sec-b { background: #d8f3dc; color: var(--green); }
+  .q-text { font-size: 16px; font-weight: 600; color: #1a1a1a; line-height: 1.5; margin-bottom: 16px; }
+
+  /* TIMER */
+  .timer-wrap { margin-bottom: 14px; }
+  .timer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .timer-num { font-size: 22px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .timer-num.urgent { color: var(--danger); animation: pulse-red 0.5s ease infinite; }
+  @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  .timer-bar { height: 8px; background: #e2e6ed; border-radius: 4px; overflow: hidden; }
+  .timer-fill { height: 100%; background: var(--navy); border-radius: 4px; transition: width 1s linear; }
+  .timer-fill.urgent { background: var(--danger); }
+
+  /* OPTIONS */
+  .opt { display: block; width: 100%; text-align: left; padding: 13px 16px; margin-bottom: 9px; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--off); cursor: pointer; font-size: 14px; font-weight: 500; color: #1a1a1a; transition: all 0.12s; }
+  .opt:active { transform: scale(0.98); }
+  .opt.selected { border-color: var(--navy); background: #e8edf5; color: var(--navy); }
+  .opt.correct { border-color: var(--success); background: #dcfce7; color: #14532d; }
+  .opt.wrong { border-color: var(--danger); background: #fef2f2; color: var(--danger); }
+  .opt.reveal { border-color: var(--success); background: #dcfce7; color: #14532d; }
+  .opt:disabled { cursor: default; }
+  .tf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .tf-btn { padding: 18px 10px; font-size: 16px; font-weight: 700; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--off); cursor: pointer; transition: all 0.12s; color: #1a1a1a; }
+  .tf-btn:active { transform: scale(0.97); }
+  .tf-btn.selected { border-color: var(--navy); background: #e8edf5; color: var(--navy); }
+  .tf-btn.correct { border-color: var(--success); background: #dcfce7; color: #14532d; }
+  .tf-btn.wrong { border-color: var(--danger); background: #fef2f2; color: var(--danger); }
+  .tf-btn.reveal { border-color: var(--success); background: #dcfce7; color: #14532d; }
+
+  /* RESULT FLASH */
+  .result-flash { text-align: center; padding: 20px 16px; }
+  .flash-icon { font-size: 48px; margin-bottom: 10px; }
+  .flash-label { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .flash-pts { font-size: 40px; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+  .flash-pts.zero { color: var(--danger); }
+  .flash-correct { font-size: 13px; color: var(--green); font-weight: 600; margin-bottom: 16px; }
+  .flash-next { font-size: 13px; color: var(--muted); }
+  .flash-countdown { font-size: 32px; font-weight: 800; color: var(--amber); }
+
+  /* LEADERBOARD */
+  .lb-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--border); background: var(--white); }
+  .lb-row.gold { background: #fffbeb; border-color: var(--amber); }
+  .lb-row.silver { background: #f0f4ff; border-color: #93a7d0; }
+  .lb-row.bronze { background: #f0faf4; border-color: var(--green-mid); }
+  .lb-row.me { outline: 2.5px solid var(--amber); }
+  .lb-rank { font-size: 20px; width: 32px; text-align: center; }
+  .lb-name { flex: 1; font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .lb-score { font-size: 16px; font-weight: 700; color: var(--navy); }
+  .lb-delta { font-size: 11px; color: var(--success); font-weight: 600; margin-left: 4px; }
+
+  /* PARTICIPANT CHIPS */
+  .chip-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+  .chip { padding: 5px 12px; border-radius: 20px; background: var(--off); border: 1px solid var(--border); font-size: 13px; color: #1a1a1a; }
+  .chip.ready { background: #dcfce7; border-color: var(--success); color: #14532d; }
+
+  /* WAITING DOTS */
+  .dots { display: flex; gap: 6px; justify-content: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--navy); animation: blink 1.2s ease infinite; }
+  .dot:nth-child(2) { animation-delay: 0.4s; }
+  .dot:nth-child(3) { animation-delay: 0.8s; }
+  @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* QR */
+  #qr-wrap { display: flex; justify-content: center; margin: 10px 0; }
+  #qr-wrap canvas { border-radius: var(--radius-sm); }
+
+  /* TABS */
+  .tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); background: var(--white); }
+  .tab.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+
+  /* PROGRESS BAR */
+  .q-progress { display: flex; gap: 3px; margin-bottom: 12px; }
+  .q-pip { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+  .q-pip.done { background: var(--amber); }
+  .q-pip.current { background: var(--navy); }
+
+  /* ANSWER REVIEW */
+  .review-item { border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; border-left: 4px solid var(--border); background: var(--white); border: 1px solid var(--border); }
+  .review-item.c { border-left-color: var(--success); }
+  .review-item.w { border-left-color: var(--danger); }
+  .review-q { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .review-exp { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-box { background: var(--off); border-radius: var(--radius-sm); padding: 14px; text-align: center; border: 1px solid var(--border); }
+  .stat-num { font-size: 28px; font-weight: 800; color: var(--navy); }
+  .stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+  .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="s-home" class="screen active">
+  <div class="app-header">
+    <h1>Wellesta — Product Quiz</h1>
+    <span class="badge">LIVE</span>
+  </div>
+  <div class="card" style="text-align:center;padding:28px 20px">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Wellesta Healthcare India · April 2026</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:4px;color:#1a1a1a">Product Knowledge<br>Assessment</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Butterfly iQ+ &amp; BrainCapture BC-1</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary btn-full" onclick="goTo('s-admin-pw')">Admin — Start &amp; Manage Quiz</button>
+      <button class="btn btn-success btn-full" onclick="goTo('s-join')">Participant — Join Quiz</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">How it works</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.8">
+      1. Admin opens this page on the laptop<br>
+      2. Each rep opens on phone and enters name<br>
+      3. Admin sees all names appear live<br>
+      4. Admin clicks <b>Start Quiz</b> — everyone begins at once<br>
+      5. Timer auto-advances all devices simultaneously<br>
+      6. Live leaderboard after every question
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PASSWORD -->
+<div id="s-admin-pw" class="screen">
+  <div class="app-header"><h1>Admin Access</h1></div>
+  <div class="card">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Enter admin password</div>
+    <input type="text" id="pw-input" placeholder="Password" style="margin-bottom:12px"/>
+    <div id="pw-error" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none">Incorrect password</div>
+    <button class="btn btn-primary btn-full" onclick="checkPw()">Enter Admin Panel</button>
+    <button class="btn btn-outline btn-full" onclick="goTo('s-home')" style="margin-top:8px">Back</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="s-admin" class="screen">
+  <div class="app-header">
+    <h1>Admin Panel</h1>
+    <span class="badge" id="admin-badge">0 joined</span>
+  </div>
+
+  <div class="card" id="admin-qr-card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Share this quiz</div>
+    <div id="qr-wrap"></div>
+    <div id="quiz-url" style="font-size:11px;color:var(--muted);text-align:center;word-break:break-all;margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px">Participants</div>
+    <div class="chip-area" id="admin-chips">
+      <span style="font-size:13px;color:var(--muted)">Waiting for participants...</span>
+    </div>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <div id="admin-status-text" style="font-size:13px;color:var(--muted);margin-bottom:12px">Add participants then start the quiz.</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-amber btn-full" id="btn-start" onclick="adminStart()" disabled>Start Quiz</button>
+      <button class="btn btn-danger btn-full" id="btn-reset" onclick="adminReset()" style="display:none">Reset &amp; Relaunch</button>
+    </div>
+  </div>
+
+  <!-- ADMIN QUIZ MONITOR -->
+  <div id="admin-monitor" style="display:none">
+    <div class="card" id="admin-q-card">
+      <div id="admin-q-info" style="font-size:13px;color:var(--muted)"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Live Leaderboard</div>
+      <div id="admin-lb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div id="s-join" class="screen">
+  <div class="app-header"><h1>Join the Quiz</h1></div>
+  <div class="card">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Enter your full name</div>
+    <input type="text" id="name-input" placeholder="e.g. Ankur Kumar" maxlength="40"/>
+    <button class="btn btn-primary btn-full" onclick="joinQuiz()">Join →</button>
+    <button class="btn btn-outline btn-full" onclick="goTo('s-home')" style="margin-top:8px">Back</button>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div id="s-wait" class="screen">
+  <div class="app-header"><h1>Waiting Room</h1></div>
+  <div class="card" style="text-align:center;padding:32px 20px">
+    <div id="wait-avatar" style="width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;margin:0 auto 12px"></div>
+    <div id="wait-name" style="font-size:17px;font-weight:700;margin-bottom:6px"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">You're in! Waiting for the admin to start the quiz…</div>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:12px;color:var(--muted)">30 questions · Speed-scored · Good luck!</div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="s-quiz" class="screen">
+  <div class="app-header">
+    <h1 id="q-header-title">Question 1 of 30</h1>
+    <span class="badge" id="q-score-badge">0 pts</span>
+  </div>
+  <div class="q-progress" id="q-pips"></div>
+  <div class="card">
+    <div class="q-header">
+      <div class="q-num" id="q-num-label"></div>
+      <div class="q-section" id="q-section-badge"></div>
+    </div>
+    <div class="timer-wrap">
+      <div class="timer-top">
+        <div style="font-size:12px;color:var(--muted);font-weight:500">Time remaining</div>
+        <div class="timer-num" id="timer-display">45</div>
+      </div>
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div id="opts-area"></div>
+  </div>
+</div>
+
+<!-- RESULT FLASH -->
+<div id="s-flash" class="screen">
+  <div class="app-header"><h1 id="flash-header">Answer Revealed</h1></div>
+  <div class="card result-flash">
+    <div class="flash-icon" id="flash-icon">✓</div>
+    <div class="flash-label">You earned</div>
+    <div class="flash-pts" id="flash-pts">0</div>
+    <div class="flash-correct" id="flash-correct"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div class="flash-label">Next question in</div>
+      <div class="flash-countdown" id="flash-count">5</div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Leaderboard</div>
+    <div id="flash-lb"></div>
+  </div>
+</div>
+
+<!-- FINAL RESULTS -->
+<div id="s-results" class="screen">
+  <div class="app-header">
+    <h1>Final Results</h1>
+    <span class="badge">Complete</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" id="tab-lb" onclick="switchTab('lb')">Leaderboard</div>
+    <div class="tab" id="tab-my" onclick="switchTab('my')">My Answers</div>
+  </div>
+  <div id="panel-lb"></div>
+  <div id="panel-my" style="display:none"></div>
+  <div id="admin-results-ctrl" style="display:none">
+    <button class="btn btn-danger btn-full" onclick="adminReset()" style="margin-top:4px">Reset &amp; Relaunch Quiz</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ─── QUESTIONS ────────────────────────────────────────────────────
+const QS = [
+  {id:1,sec:'A',type:'mcq',q:'How many separate probes does the Butterfly iQ+ require for whole-body ultrasound scanning?',opts:['A.  Four — one for each body region','B.  Three — cardiac, linear, and convex','C.  One — a single 3-in-1 probe covers all applications','D.  Two — one for superficial and one for deep scanning'],ans:2,exp:'One 3-in-1 probe covers convex, linear, and cardiac applications.'},
+  {id:2,sec:'A',type:'mcq',q:'What does the IP67 rating on the Butterfly iQ+ protect against?',opts:['A.  Drop damage from heights above 2 metres','B.  Full dust protection and submersion in 1 metre of water for 30 minutes','C.  Electromagnetic interference from hospital monitors','D.  Accidental battery overcharge'],ans:1,exp:'IP6X = fully dustproof; IPX7 = submersible in 1 m of water for 30 minutes.'},
+  {id:3,sec:'A',type:'mcq',q:'Which AI tool on the Butterfly iQ+ enhances the visibility of the needle tip during procedures?',opts:['A.  Auto EF','B.  Biplane Imaging™','C.  NeedleViz™','D.  TeleGuidance™'],ans:2,exp:'NeedleViz™ amplifies the needle echo signal in real time using AI post-processing.'},
+  {id:4,sec:'A',type:'mcq',q:'What is Biplane Imaging™?',opts:['A.  A feature requiring two separate probes placed simultaneously','B.  Simultaneous dual-plane imaging from a single probe position — exclusive to Butterfly handhelds','C.  A cardiac-only imaging mode available on all handheld devices','D.  An AI tool that measures fluid volume automatically'],ans:1,exp:'Biplane = simultaneous dual-plane from one probe. Available on Butterfly iQ+ and iQ3. Not on GE VScan, Lumify, or Clarius.'},
+  {id:5,sec:'A',type:'mcq',q:'TeleGuidance™ — the real-time remote expert guidance feature — is available on which operating system?',opts:['A.  Android only','B.  Both iOS and Android','C.  iOS only','D.  Windows tablets only'],ans:2,exp:'TeleGuidance™ is iOS only. All core scanning, AI tools, and cloud work on Android.'},
+  {id:6,sec:'A',type:'mcq',q:'How many clinical presets are built into the Butterfly iQ+ app?',opts:['A.  5','B.  10','C.  15','D.  20+'],ans:3,exp:'20+ clinical presets, pre-optimised per anatomical application.'},
+  {id:7,sec:'A',type:'mcq',q:'Which three guided scan protocols are built into the Butterfly iQ+ app?',opts:['A.  Cardiac, Vascular, and Nerve','B.  eFAST, Lung, and Cardiac','C.  eFAST, Abdominal, and Nerve','D.  Lung, Abdominal, and Vascular'],ans:1,exp:'eFAST (Emergency), Lung Protocol (ICU), Cardiac Protocol (ICU / Anaesthesia).'},
+  {id:8,sec:'A',type:'mcq',q:'What does the Auto EF tool on the Butterfly iQ+ automatically calculate?',opts:['A.  Blood pressure','B.  Respiratory rate','C.  Left ventricular ejection fraction','D.  Bladder volume'],ans:2,exp:'Auto EF = left ventricular ejection fraction; distinguishes cardiogenic from distributive shock in ICU.'},
+  {id:9,sec:'A',type:'mcq',q:'Which AI tool on the Butterfly iQ+ automatically calculates bladder volume?',opts:['A.  NeedleViz™','B.  Auto EF','C.  Auto Bladder Volume','D.  Biplane Imaging™'],ans:2,exp:'Auto Bladder Volume eliminates manual ellipse measurements in ICU/Emergency.'},
+  {id:10,sec:'A',type:'mcq',q:'What military standard does the Butterfly iQ+ meet for drop and shock resistance?',opts:['A.  MIL-STD-461','B.  MIL-STD-810G — tested to a 4-foot (1.2 m) drop','C.  MIL-STD-1275','D.  MIL-STD-704'],ans:1,exp:'MIL-STD-810G: 4 ft (1.2 m) drop, 100G shock pulse.'},
+  {id:11,sec:'A',type:'tf',q:'The Butterfly iQ+ All-in Lifetime Pro subscription requires annual renewal to maintain software access.',opts:['True','False'],ans:1,exp:'Lifetime Pro = no renewal ever. Software access is permanent for the device lifetime.'},
+  {id:12,sec:'A',type:'tf',q:'The Butterfly iQ+ has a replaceable cable, which helps reduce total cost of ownership.',opts:['True','False'],ans:0,exp:'Cable is the most common failure point; replaceable cable avoids full device replacement.'},
+  {id:13,sec:'A',type:'tf',q:'Biplane Imaging™ is available on both the Butterfly iQ+ and the Butterfly iQ3.',opts:['True','False'],ans:0,exp:'Biplane Imaging™ is available on Butterfly iQ+ and iQ3. Not available on GE VScan, Lumify, or Clarius.'},
+  {id:14,sec:'A',type:'tf',q:'The Butterfly iQ+ is suitable for use in the Operating Theatre for sterile procedures such as nerve blocks.',opts:['True','False'],ans:0,exp:'iQ+ is sterile-compatible. GE VScan Air is not suitable for sterile OT procedures.'},
+  {id:15,sec:'A',type:'tf',q:'The Butterfly iQ+ provides unlimited secure cloud storage per account at no additional cost on the All-in Lifetime Pro plan.',opts:['True','False'],ans:0,exp:'Unlimited cloud storage included with All-in Lifetime Pro. HIPAA/GDPR compliant.'},
+  {id:16,sec:'B',type:'mcq',q:'What does the BC-1 app do if electrode impedance is too high before a recording starts?',opts:['A.  Automatically skips that electrode and records on remaining channels','B.  Alerts the operator and guides correction before the recording begins','C.  Records anyway and flags the affected channel in the report','D.  Stops the recording permanently and requires a restart'],ans:1,exp:'App alerts operator and guides correction before recording proceeds. Ensures signal quality.'},
+  {id:17,sec:'B',type:'mcq',q:'How many EEG electrodes does the BC-1 system use for a standard recording?',opts:['A.  10','B.  19','C.  27 EEG electrodes (10-20 system) + REF + GND = 32 total','D.  64'],ans:2,exp:'27 EEG electrodes (10-20 system) + REF + GND = 32 total amplifier channels.'},
+  {id:18,sec:'B',type:'mcq',q:'Who can operate the BC-1 to perform an EEG recording after Wellesta training?',opts:['A.  Only qualified EEG technicians with specialist certification','B.  Only on-site neurologists','C.  ICU nurses or other healthcare staff after 1-day Wellesta training','D.  Only biomedical engineers'],ans:2,exp:'ICU nurses are the primary operators after 1-day Wellesta training. App guides every step.'},
+  {id:19,sec:'B',type:'mcq',q:'How long does the BC-1 amplifier battery last on a single charge?',opts:['A.  4 hours','B.  8 hours','C.  12 hours','D.  24+ hours'],ans:3,exp:'24+ hours battery. No mains power required during recording.'},
+  {id:20,sec:'B',type:'mcq',q:'What is NCSE and why is it relevant to BC-1?',opts:['A.  A nursing competency scoring system used in ICUs','B.  Non-Convulsive Status Epilepticus — seizure activity with no visible convulsions, detectable only by EEG','C.  A national critical care standard for equipment procurement','D.  A drug protocol for ICU seizure management'],ans:1,exp:'NCSE = Non-Convulsive Status Epilepticus. Invisible without EEG. Present in up to 8–10% of ICU patients with altered consciousness.'},
+  {id:21,sec:'B',type:'mcq',q:'What is the BrainCapture reading service report turnaround time from upload to signed report?',opts:['A.  24–48 hours','B.  12–24 hours','C.  2–4 hours','D.  7 days'],ans:2,exp:'2–4 hours from upload to signed neurologist report via BrainCapture reading service.'},
+  {id:22,sec:'B',type:'mcq',q:'The BC-1 EEG recording is uploaded to which cloud platform for remote neurologist interpretation?',opts:['A.  AWS Healthcare Cloud','B.  Google Cloud Healthcare','C.  Galen Data — HITRUST, ISO 13485, HIPAA, and GDPR certified','D.  Microsoft Azure Health'],ans:2,exp:'Galen Data cloud: HITRUST CSF r2, ISO 13485, HIPAA, and GDPR certified.'},
+  {id:23,sec:'B',type:'mcq',q:'Which of the following is NOT a clinical use case for the BC-1 in the ICU?',opts:['A.  Post-cardiac arrest brain monitoring','B.  Unexplained coma or altered consciousness','C.  Blood pressure monitoring in sepsis','D.  Traumatic brain injury (TBI) monitoring'],ans:2,exp:'BC-1 monitors brain (EEG). Blood pressure is a haemodynamic monitor function.'},
+  {id:24,sec:'B',type:'mcq',q:'According to published data, what percentage of ICU patients with unexplained altered consciousness may have NCSE?',opts:['A.  1–2%','B.  8–10%','C.  25–30%','D.  More than 50%'],ans:1,exp:'8–10% per Towne et al. (Neurology 2000); up to 35% in post-cardiac arrest coma.'},
+  {id:25,sec:'B',type:'mcq',q:'How many electrode cap sizes does BC-1 offer, and what age range do they cover?',opts:['A.  2 sizes — adult and paediatric only','B.  3 sizes — infant, child, and adult','C.  5 sizes — covering 8 months to adult','D.  One universal size fits all patients'],ans:2,exp:'5 cap sizes: 8 months to adult, covering all hair types.'},
+  {id:26,sec:'B',type:'tf',q:'The BC-1 requires a dedicated EEG room and stable mains power supply to operate.',opts:['True','False'],ans:1,exp:'Battery-powered and portable. WiFi needed only for upload, not during recording.'},
+  {id:27,sec:'B',type:'tf',q:'The BC-1 is CE Class IIa certified as a medical device.',opts:['True','False'],ans:0,exp:'CE Class IIa — same regulatory class as AIIMS / Apollo-grade EEG systems.'},
+  {id:28,sec:'B',type:'tf',q:'BC-1 replaces the neurologist — the device interprets the EEG automatically without a doctor.',opts:['True','False'],ans:1,exp:'BC-1 enables the recording. A neurologist interprets and signs remotely via cloud. Device does not replace the doctor.'},
+  {id:29,sec:'B',type:'tf',q:'An ICU nurse can place the BC-1 electrode cap and start a recording in under 10 minutes after training.',opts:['True','False'],ans:0,exp:'Cap placed and recording started in under 10 minutes after training.'},
+  {id:30,sec:'B',type:'tf',q:'The BC-1 requires an annual maintenance contract (AMC) due to its serviceable internal components.',opts:['True','False'],ans:1,exp:'No serviceable components, no calibration, no AMC. Zero maintenance cost.'},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────
+const ADMIN_PW = 'wellesta2026';
+const POLL_MS  = 500;
+
+let myName     = '';
+let isAdmin    = false;
+let myAnswers  = [];
+let myScore    = 0;
+let pollTimer  = null;
+let localQ     = -1;
+let flashTimer = null;
+let timerInterval = null;
+
+// ─── STORAGE HELPERS ──────────────────────────────────────────────
+async function sGet(key, shared=true) {
+  try { const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }
+  catch(e) { return null; }
+}
+async function sSet(key, val, shared=true) {
+  try { await window.storage.set(key, JSON.stringify(val), shared); } catch(e) {}
+}
+async function sDel(key, shared=true) {
+  try { await window.storage.delete(key, shared); } catch(e) {}
+}
+
+// ─── QUIZ STATE SCHEMA ────────────────────────────────────────────
+// quiz:state  { status:'waiting'|'question'|'flash'|'finished', q:0, qAt:ts, flashAt:ts }
+// quiz:names  { [name]: 1 }
+// quiz:scores { [name]: { score:0, answers:[] } }
+
+// ─── NAVIGATION ───────────────────────────────────────────────────
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── PASSWORD ─────────────────────────────────────────────────────
+function checkPw() {
+  const v = document.getElementById('pw-input').value.trim();
+  if (v === ADMIN_PW) {
+    isAdmin = true;
+    document.getElementById('pw-error').style.display = 'none';
+    document.getElementById('pw-input').value = '';
+    initAdmin();
+    goTo('s-admin');
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+  }
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────
+async function initAdmin() {
+  // generate QR
+  const url = window.location.href;
+  document.getElementById('quiz-url').textContent = url;
+  const qrDiv = document.getElementById('qr-wrap');
+  qrDiv.innerHTML = '';
+  try {
+    new QRCode(qrDiv, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+  } catch(e) {}
+
+  const state = await sGet('quiz:state');
+  const btn = document.getElementById('btn-reset');
+  if (state && state.status !== 'waiting') {
+    btn.style.display = 'block';
+    document.getElementById('btn-start').style.display = 'none';
+  }
+  pollAdmin();
+}
+
+async function pollAdmin() {
+  if (!isAdmin) return;
+  const names  = await sGet('quiz:names') || {};
+  const state  = await sGet('quiz:state');
+  const scores = await sGet('quiz:scores') || {};
+  const list   = Object.keys(names);
+
+  // chips
+  const ca = document.getElementById('admin-chips');
+  if (list.length === 0) {
+    ca.innerHTML = '<span style="font-size:13px;color:var(--muted)">Waiting for participants...</span>';
+  } else {
+    ca.innerHTML = list.map(n => `<span class="chip ready">✓ ${n}</span>`).join('');
+  }
+  document.getElementById('admin-badge').textContent = list.length + ' joined';
+
+  // start button
+  const btnStart = document.getElementById('btn-start');
+  btnStart.disabled = list.length === 0;
+  document.getElementById('admin-status-text').textContent =
+    list.length > 0 ? `${list.length} participant(s) ready.` : 'Waiting for participants to join.';
+
+  // monitor
+  if (state && (state.status === 'question' || state.status === 'flash' || state.status === 'finished')) {
+    document.getElementById('admin-monitor').style.display = 'block';
+    document.getElementById('btn-reset').style.display = 'block';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('admin-qr-card').style.display = 'none';
+
+    const q = QS[state.q] || QS[QS.length-1];
+    const answered = Object.values(scores).filter(s => s.answers && s.answers[state.q] !== undefined).length;
+    document.getElementById('admin-q-info').innerHTML =
+      `<b>Q${state.q+1} of ${QS.length}</b> — ${answered}/${list.length} answered`;
+
+    // leaderboard
+    const lb = buildLeaderboard(scores);
+    document.getElementById('admin-lb').innerHTML = lbHTML(lb, '');
+  }
+
+  pollTimer = setTimeout(pollAdmin, POLL_MS);
+}
+
+async function adminStart() {
+  const state = { status: 'question', q: 0, qAt: Date.now(), flashAt: null };
+  await sSet('quiz:state', state);
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'block';
+  document.getElementById('admin-monitor').style.display = 'block';
+  document.getElementById('admin-qr-card').style.display = 'none';
+}
+
+async function adminReset() {
+  if (!confirm('Reset the quiz? All scores and answers will be cleared.')) return;
+  await sDel('quiz:state');
+  await sDel('quiz:scores');
+  // keep names
+  myAnswers = []; myScore = 0; localQ = -1;
+  clearTimeout(pollTimer);
+  clearInterval(timerInterval);
+  clearTimeout(flashTimer);
+  if (isAdmin) {
+    document.getElementById('btn-start').style.display = 'block';
+    document.getElementById('btn-reset').style.display = 'none';
+    document.getElementById('admin-monitor').style.display = 'none';
+    document.getElementById('admin-qr-card').style.display = 'block';
+    pollTimer = setTimeout(pollAdmin, POLL_MS);
+  } else {
+    goTo('s-wait');
+    pollParticipant();
+  }
+}
+
+// ─── JOIN ─────────────────────────────────────────────────────────
+async function joinQuiz() {
+  const v = document.getElementById('name-input').value.trim();
+  if (!v) return;
+  myName = v;
+  const names = await sGet('quiz:names') || {};
+  names[myName] = 1;
+  await sSet('quiz:names', names);
+
+  document.getElementById('wait-avatar').textContent = myName.charAt(0).toUpperCase();
+  document.getElementById('wait-name').textContent = myName;
+  goTo('s-wait');
+  pollParticipant();
+}
+
+// ─── PARTICIPANT POLL ─────────────────────────────────────────────
+async function pollParticipant() {
+  const state = await sGet('quiz:state');
+  if (!state) { pollTimer = setTimeout(pollParticipant, POLL_MS); return; }
+
+  if (state.status === 'question') {
+    if (localQ !== state.q) {
+      localQ = state.q;
+      clearInterval(timerInterval);
+      clearTimeout(flashTimer);
+      showQuestion(state);
+    }
+  } else if (state.status === 'flash') {
+    if (localQ !== -99) {
+      localQ = -99;
+      clearInterval(timerInterval);
+      showFlash(state);
+    }
+  } else if (state.status === 'finished') {
+    clearInterval(timerInterval);
+    showFinalResults();
+    return;
+  }
+
+  pollTimer = setTimeout(pollParticipant, POLL_MS);
+}
+
+// ─── SHOW QUESTION ────────────────────────────────────────────────
+function showQuestion(state) {
+  const qIdx  = state.q;
+  const q     = QS[qIdx];
+  const limit = q.type === 'mcq' ? 45 : 20;
+  const elapsed = Math.floor((Date.now() - state.qAt) / 1000);
+  let remaining = Math.max(0, limit - elapsed);
+
+  goTo('s-quiz');
+
+  document.getElementById('q-header-title').textContent = `Question ${qIdx+1} of ${QS.length}`;
+  document.getElementById('q-score-badge').textContent  = myScore.toLocaleString() + ' pts';
+  document.getElementById('q-num-label').textContent    = `Q${qIdx+1} · ${q.type === 'mcq' ? 'Multiple Choice' : 'True / False'}`;
+
+  const sb = document.getElementById('q-section-badge');
+  sb.textContent = q.sec === 'A' ? 'Section A — Butterfly iQ+' : 'Section B — BrainCapture BC-1';
+  sb.className = 'q-section ' + (q.sec === 'A' ? 'sec-a' : 'sec-b');
+
+  document.getElementById('q-text').textContent = q.q;
+
+  // progress pips
+  const pips = document.getElementById('q-pips');
+  pips.innerHTML = QS.map((_,i) =>
+    `<div class="q-pip ${i < qIdx ? 'done' : i === qIdx ? 'current' : ''}"></div>`
+  ).join('');
+
+  // render options (unanswered)
+  renderOpts(q, null, false);
+
+  // timer
+  const fill    = document.getElementById('timer-fill');
+  const display = document.getElementById('timer-display');
+  function setTimer(t) {
+    display.textContent = t;
+    fill.style.width    = (t / limit * 100) + '%';
+    display.className   = 'timer-num' + (t <= 5 ? ' urgent' : '');
+    fill.className      = 'timer-fill' + (t <= 5 ? ' urgent' : '');
+  }
+  setTimer(remaining);
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(async () => {
+    remaining--;
+    setTimer(remaining);
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      // auto-submit unanswered
+      const scores = await sGet('quiz:scores') || {};
+      if (!scores[myName]) scores[myName] = { score: 0, answers: [] };
+      if (scores[myName].answers[qIdx] === undefined) {
+        scores[myName].answers[qIdx] = { chosen: -1, correct: false, pts: 0, time: limit };
+        await sSet('quiz:scores', scores);
+      }
+      if (isAdmin) await advanceQuestion(qIdx);
+    }
+  }, 1000);
+}
+
+function renderOpts(q, chosen, locked) {
+  const area = document.getElementById('opts-area');
+  if (q.type === 'mcq') {
+    area.innerHTML = q.opts.map((o,i) => {
+      let cls = 'opt';
+      if (locked) {
+        if (i === q.ans) cls += ' correct';
+        else if (i === chosen) cls += ' wrong';
+      } else if (i === chosen) cls += ' selected';
+      return `<button class="${cls}" onclick="selectOpt(${i})" ${locked?'disabled':''}>${o}</button>`;
+    }).join('');
+  } else {
+    area.innerHTML = `<div class="tf-grid">` + q.opts.map((o,i) => {
+      let cls = 'tf-btn';
+      if (locked) {
+        if (i === q.ans) cls += ' correct';
+        else if (i === chosen) cls += ' wrong';
+      } else if (i === chosen) cls += ' selected';
+      return `<button class="${cls}" onclick="selectOpt(${i})" ${locked?'disabled':''}>${o}</button>`;
+    }).join('') + `</div>`;
+  }
+}
+
+async function selectOpt(chosen) {
+  const state = await sGet('quiz:state');
+  if (!state || state.status !== 'question') return;
+  const qIdx  = state.q;
+  const q     = QS[qIdx];
+  const limit = q.type === 'mcq' ? 45 : 20;
+  const elapsed = Math.min(limit, Math.floor((Date.now() - state.qAt) / 1000));
+
+  // calc points
+  const correct = chosen === q.ans;
+  let pts = 0;
+  if (correct) pts = Math.round(1000 - (elapsed / limit * 500));
+
+  // save
+  const scores = await sGet('quiz:scores') || {};
+  if (!scores[myName]) scores[myName] = { score: 0, answers: [] };
+  if (scores[myName].answers[qIdx] !== undefined) return; // already answered
+  scores[myName].answers[qIdx] = { chosen, correct, pts, time: elapsed };
+  scores[myName].score = (scores[myName].score || 0) + pts;
+  myScore = scores[myName].score;
+  myAnswers[qIdx] = { chosen, correct, pts, time: elapsed };
+  await sSet('quiz:scores', scores);
+
+  // lock UI
+  clearInterval(timerInterval);
+  document.getElementById('q-score-badge').textContent = myScore.toLocaleString() + ' pts';
+  renderOpts(q, chosen, true);
+
+  // if admin: check if all answered → advance
+  if (isAdmin) {
+    const names = await sGet('quiz:names') || {};
+    const total = Object.keys(names).length;
+    const ansCount = Object.values(scores).filter(s => s.answers && s.answers[qIdx] !== undefined).length;
+    if (ansCount >= total) await advanceQuestion(qIdx);
+  }
+}
+
+async function advanceQuestion(qIdx) {
+  if (qIdx < QS.length - 1) {
+    await sSet('quiz:state', { status: 'flash', q: qIdx, qAt: null, flashAt: Date.now() });
+    setTimeout(async () => {
+      await sSet('quiz:state', { status: 'question', q: qIdx + 1, qAt: Date.now(), flashAt: null });
+    }, 5000);
+  } else {
+    await sSet('quiz:state', { status: 'flash', q: qIdx, qAt: null, flashAt: Date.now() });
+    setTimeout(async () => {
+      await sSet('quiz:state', { status: 'finished', q: qIdx, qAt: null, flashAt: null });
+    }, 5000);
+  }
+}
+
+// ─── FLASH SCREEN ─────────────────────────────────────────────────
+async function showFlash(state) {
+  const qIdx   = state.q;
+  const q      = QS[qIdx];
+  const scores = await sGet('quiz:scores') || {};
+  const myAns  = scores[myName] && scores[myName].answers[qIdx];
+  const correct = myAns && myAns.correct;
+  const pts     = myAns ? myAns.pts : 0;
+  const elapsed = Math.min(5, Math.max(0, Math.round((Date.now() - state.flashAt) / 1000)));
+  let countdown = 5 - elapsed;
+
+  goTo('s-flash');
+  document.getElementById('flash-header').textContent = `Q${qIdx+1} — Answer Revealed`;
+  document.getElementById('flash-icon').textContent   = correct ? '✓' : (myAns ? '✗' : '⏱');
+  document.getElementById('flash-pts').textContent    = '+' + pts.toLocaleString();
+  document.getElementById('flash-pts').className      = 'flash-pts' + (pts === 0 ? ' zero' : '');
+  document.getElementById('flash-correct').textContent = 'Correct answer: ' + q.opts[q.ans];
+
+  const lb = buildLeaderboard(scores);
+  document.getElementById('flash-lb').innerHTML = lbHTML(lb, myName);
+
+  const cd = document.getElementById('flash-count');
+  cd.textContent = Math.max(0, countdown);
+  clearTimeout(flashTimer);
+  const tick = () => {
+    countdown--;
+    cd.textContent = Math.max(0, countdown);
+  };
+  flashTimer = setInterval(tick, 1000);
+  setTimeout(() => clearInterval(flashTimer), 5000);
+}
+
+// ─── FINAL RESULTS ────────────────────────────────────────────────
+async function showFinalResults() {
+  clearInterval(timerInterval);
+  clearTimeout(flashTimer);
+
+  const scores = await sGet('quiz:scores') || {};
+  const myData = scores[myName];
+  myAnswers = myData ? myData.answers : [];
+  myScore   = myData ? myData.score : 0;
+
+  const lb = buildLeaderboard(scores);
+  goTo('s-results');
+
+  // leaderboard panel
+  document.getElementById('panel-lb').innerHTML = lbHTML(lb, myName, true);
+
+  // my answers panel
+  const correct = myAnswers.filter(a => a && a.correct).length;
+  const pct     = Math.round(correct / QS.length * 100);
+  let myHTML    = `<div class="stat-grid">
+    <div class="stat-box"><div class="stat-num">${myScore.toLocaleString()}</div><div class="stat-lbl">Total Points</div></div>
+    <div class="stat-box"><div class="stat-num">${correct}/${QS.length}</div><div class="stat-lbl">Correct (${pct}%)</div></div>
+  </div>`;
+  myHTML += QS.map((q,i) => {
+    const a = myAnswers[i];
+    const c = a && a.correct;
+    return `<div class="review-item ${c?'c':'w'}">
+      <div class="review-q">${c?'✓':'✗'} Q${i+1}: ${q.q.length > 70 ? q.q.substring(0,70)+'…' : q.q}</div>
+      <div class="review-exp">${q.exp}${a&&a.pts?' · +'+a.pts.toLocaleString()+' pts':''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('panel-my').innerHTML = myHTML;
+
+  if (isAdmin) document.getElementById('admin-results-ctrl').style.display = 'block';
+}
+
+// ─── LEADERBOARD HELPERS ──────────────────────────────────────────
+function buildLeaderboard(scores) {
+  return Object.entries(scores)
+    .map(([name, data]) => ({ name, score: data.score || 0 }))
+    .sort((a,b) => b.score - a.score);
+}
+
+function lbHTML(lb, myName, final=false) {
+  if (lb.length === 0) return '<div style="font-size:13px;color:var(--muted)">No scores yet.</div>';
+  const medals = ['🥇','🥈','🥉'];
+  return lb.map((p,i) => {
+    const cls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const me  = p.name === myName ? ' me' : '';
+    return `<div class="lb-row ${cls}${me}">
+      <span class="lb-rank">${medals[i]||`#${i+1}`}</span>
+      <span class="lb-name">${p.name}${p.name===myName?' ★':''}</span>
+      <span class="lb-score">${p.score.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('tab-lb').className = 'tab'+(t==='lb'?' active':'');
+  document.getElementById('tab-my').className = 'tab'+(t==='my'?' active':'');
+  document.getElementById('panel-lb').style.display = t==='lb'?'block':'none';
+  document.getElementById('panel-my').style.display = t==='my'?'block':'none';
+}
+
+// ─── KEYBOARD ENTER ───────────────────────────────────────────────
+document.getElementById('name-input').addEventListener('keydown', e => { if(e.key==='Enter') joinQuiz(); });
+document.getElementById('pw-input').addEventListener('keydown',   e => { if(e.key==='Enter') checkPw(); });
+</script>
+</body>
+</html>
